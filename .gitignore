@@ -1,0 +1,9 @@
+.DS_Store
+*.swp
+*~
+build/
+results/
+tmp/
+*.runs/
+*.fix
+*.vcd

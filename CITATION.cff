@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: Giolit Trading Risk Verifier
+version: 1.0.0
+date-released: 2026-10-13
+abstract: Formal verification of trading strategies and risk controls. A proof
+  that every rule holds on every run — any market move, fill, reject, cancel, and
+  message order within assumptions, for any number of orders — or the event-by-event
+  run as a FIX 4.4 log that breaks one. Signed proof certificates and risk headroom
+  with the Giolit Risk Resilience Score.
+authors:
+  - name: Giolit Labs
+    address: Ramavarmapuram P.O., Thrissur, Kerala, India
+    website: https://www.giolit.com
+    email: business.giolitlabs@gmail.com
+repository-code: https://github.com/Giolit-Labs/Giolit-Trade-Verifier
+license: SEE LICENSE.md
+keywords:
+  - quantitative-finance
+  - algorithmic-trading
+  - formal-verification
+  - risk-management
+  - fix-protocol
+  - high-frequency-trading
+  - proof-certificates
+  - model-checking

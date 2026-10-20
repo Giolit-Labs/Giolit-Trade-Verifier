@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify bundle checksum
+        run: sha256sum -c CHECKSUMS.txt
+
+      - name: Extract bundle
+        run: tar xzf giolit-trade-verifier-1.0.0-trial.tar.gz
+
+      - name: Check bundle integrity
+        run: |
+          cd giolit-trade-verifier-1.0.0-trial
+          sha256sum -c SHA256SUMS
+
+      - name: Check docs mirror is in sync
+        run: |
+          for f in Brochure.pdf License-Terms.md License-Terms.pdf README.pdf Reference-Manual.pdf THIRD-PARTY-NOTICES.md Tutorial-1-Verifying-Trading-Strategies.pdf Tutorial-2-SDK-Guide.pdf Tutorial-3-Algorithmic-Trading-and-Verification.pdf; do
+            cmp -s "docs/$f" "giolit-trade-verifier-1.0.0-trial/documents/$f" || { echo "docs/$f differs from bundle documents/$f"; exit 1; }
+          done
+          cmp -s docs/README.md giolit-trade-verifier-1.0.0-trial/documents/markdown/README.md || { echo "docs/README.md differs from bundle documents/markdown/README.md"; exit 1; }
+          cmp -s docs/TUTORIAL.md giolit-trade-verifier-1.0.0-trial/documents/markdown/TUTORIAL.md || { echo "docs/TUTORIAL.md differs from bundle documents/markdown/TUTORIAL.md"; exit 1; }
+          cmp -s docs/logo.png giolit-trade-verifier-1.0.0-trial/code/share/giolit/logo.png || { echo "docs/logo.png differs from bundle code/share/giolit/logo.png"; exit 1; }
+          echo "docs/ matches bundle"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libllvm18 libclang-cpp18 libclang-common-18-dev libc6-dev libssl3 g++
+
+      - name: Install verifier (user prefix)
+        run: |
+          ./giolit-trade-verifier-1.0.0-trial/code/install.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Version and licence (uses no run)
+        run: |
+          trade-verify --version
+          trade-verify --license || true
+
+      - name: Self-test examples
+        run: |
+          cp -r ~/.local/giolit-trade-verifier/share/giolit/examples /tmp/trade-examples
+          cd /tmp/trade-examples
+          trade-verify --timeout=60 02_position_limit_fixed.gts
+          echo "--- expecting violation (exit 1) ---"
+          set +e
+          trade-verify --timeout=60 01_position_limit.gts
+          rc=$?
+          set -e
+          test "$rc" -eq 1
+
+      - name: JSON smoke test
+        run: |
+          cd /tmp/trade-examples
+          trade-verify --timeout=60 --json=/tmp/results.json 02_position_limit_fixed.gts
+          test -f /tmp/results.json
+
+      - name: Build and test SDK examples
+        run: |
+          cd ~/.local/giolit-trade-verifier/share/giolit/sdk-examples
+          ./build.sh
+          ./verify_spec ~/.local/giolit-trade-verifier/share/giolit/examples/02_position_limit_fixed.gts
+          ./headroom ~/.local/giolit-trade-verifier/share/giolit/examples/02_position_limit_fixed.gts
+
+      - name: Upload JSON (example)
+        uses: actions/upload-artifact@v4
+        with:
+          name: json-example
+          path: /tmp/results.json
